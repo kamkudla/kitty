@@ -7,6 +7,7 @@ layout(std140) uniform CellRenderData {
     float xstart, ystart, dx, dy, sprite_dx, sprite_dy, background_opacity, use_cell_bg_for_selection_fg, use_cell_fg_for_selection_fg, use_cell_for_selection_bg;
 
     uint default_fg, default_bg, highlight_fg, highlight_bg, cursor_fg, cursor_bg, url_color, url_style, inverted;
+    uint bold_is_bright;
 
     uint xnum, ynum, cursor_fg_sprite_idx;
     float cursor_x, cursor_y, cursor_w;
@@ -69,6 +70,22 @@ vec3 color_to_vec(uint c) {
     g = (c >> 8) & BYTE_MASK;
     b = c & BYTE_MASK;
     return vec3(gamma_lut[r], gamma_lut[g], gamma_lut[b]);
+}
+
+uint byte_to_bool(uint n) {
+	uint n1 = (n >> 1) | n;
+	uint n2 = (n1 >> 2) | n1;
+	uint n3 = (n2 >> 4) | n2;
+	return n3 & 1u;
+}
+
+uint brighten_color(uint c, uint is_bold) {
+	uint table_idx = (c >> 8) & 0xFFu;
+	uint is_table_color = c & 1u;
+	uint is_rgb_color = byte_to_bool(c & 0xFEu);
+	uint is_8bit_color = byte_to_bool(table_idx & 0xF8u);
+	uint should_brighten = bold_is_bright * is_bold * (1u >> (is_rgb_color + is_8bit_color)) * is_table_color;
+	return c | (0x800u * should_brighten);
 }
 
 uint resolve_color(uint c, uint defval) {
@@ -152,16 +169,17 @@ void main() {
     // set cell color indices {{{
     uvec2 default_colors = uvec2(default_fg, default_bg);
     uint text_attrs = sprite_coords[3];
+    uint is_bold = ((text_attrs >> BOLD_SHIFT) & ONE);
     uint is_reversed = ((text_attrs >> REVERSE_SHIFT) & ONE);
     uint is_inverted = is_reversed + inverted;
     int fg_index = fg_index_map[is_inverted];
     int bg_index = 1 - fg_index;
     int mark = int(text_attrs >> MARK_SHIFT) & MARK_MASK;
     uint has_mark = uint(step(1, float(mark)));
-    uint bg_as_uint = resolve_color(colors[bg_index], default_colors[bg_index]);
+    uint bg_as_uint = resolve_color(brighten_color(colors[bg_index], is_bold), default_colors[bg_index]);
     bg_as_uint = has_mark * color_table[NUM_COLORS + mark] + (ONE - has_mark) * bg_as_uint;
     vec3 bg = color_to_vec(bg_as_uint);
-    uint fg_as_uint = resolve_color(colors[fg_index], default_colors[fg_index]);
+    uint fg_as_uint = resolve_color(brighten_color(colors[fg_index], is_bold), default_colors[fg_index]);
     // }}}
 
     // Foreground {{{
