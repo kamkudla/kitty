@@ -1,3 +1,11 @@
+= Kitty but with bold text in bright color
+
+This repo is inspired by https://github.com/ckabalan/kitty/[ckabalan/kitty] and https://github.com/KittyPatch/kitty[KittyPatch/kitty]. 
+
+The developer of Kitty has decided to not support bold text in bright colors, so the changes here are a patch that make it work. Discussions on the reasoning why has been extensive see https://github.com/kovidgoyal/kitty/issues/512[#512]. Compile from source and place `bold_is_bright yes` to `kitty.conf`. 
+
+Original README continues below.
+
 = kitty - the fast, feature-rich, cross-platform, GPU based terminal
 
 See https://sw.kovidgoyal.net/kitty/[the kitty website].
